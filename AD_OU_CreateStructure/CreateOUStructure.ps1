@@ -14,7 +14,7 @@ $AdminobjectOUs = @('ServiceAccounts', 'Servers', 'Permissions','Roles')
 $skipSubOUs = @('Deprovision', 'Quarantine', 'Groups')
 #########################
 #$tierOUs = @('Tier 1', 'Tier 2')
-$ObjectSubOUs = @('ServiceAccounts', 'Groups', 'Desktops', 'Laptops', 'VDIs', 'Test')
+$ObjectSubOUs = @('ServiceAccounts', 'Groups', 'Servers', 'Desktops', 'Laptops', 'VDIs', 'Test')
 
 
 #Consodated list of all 3 letter codes which IAM uses. 
@@ -71,8 +71,36 @@ foreach ($name in $TopLevelOUs) {
             $csvdn = "OU=" + $ou.name + "," + $fulldn 
             
             foreach ($ObjectSubOU in $ObjectSubOUs) {
-                New-ADOrganizationalUnit -Name $ObjectSubOU -Path $csvdn
-                $Objectfulldn = "OU=" + $ObjectSubOU + "," + $csvdn
+
+                ## Recall:
+                ## $ObjectSubOUs = @('ServiceAccounts', 'Groups', 'Desktops', 'Laptops', 'VDIs', 'Servers', 'Test')
+
+                if ($name -eq 'Tier 1'){
+
+                    # No Laptops or Desktops in Tier 1
+
+                    if($ObjectSubOU -ne "Desktops" -and $ObjectSubOU -ne "Laptops") {
+
+                        New-ADOrganizationalUnit -Name $ObjectSubOU -Path $csvdn
+                        $Objectfulldn = "OU=" + $ObjectSubOU + "," + $csvdn
+
+                    }
+
+                } elseif ($name -eq 'Tier 2') {
+
+                    # No Servers in Tier 2
+
+                    if($ObjectSubOU -ne "Servers") {
+
+                        New-ADOrganizationalUnit -Name $ObjectSubOU -Path $csvdn
+                        $Objectfulldn = "OU=" + $ObjectSubOU + "," + $csvdn
+
+                    }
+
+                } else {
+                    New-ADOrganizationalUnit -Name $ObjectSubOU -Path $csvdn
+                    $Objectfulldn = "OU=" + $ObjectSubOU + "," + $csvdn
+                }
             }
         }
     }

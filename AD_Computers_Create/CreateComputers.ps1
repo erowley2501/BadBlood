@@ -339,7 +339,7 @@ Function CreateComputer{
         }
 
         # Added by erowley2501
-        $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like '*Severs*'} | Get-Random
+        $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like '*Servers*'} | Get-Random
 
         #=======================================================================
 
@@ -452,7 +452,7 @@ Function CreateComputer{
          write-host "New-ADComputer -server $setdc -Name $CompName -DisplayName $CompName -Enabled $true -path $ou -ManagedBy $manager -owner $owner -SAMAccountName $sam"
          write-host `n
 	}
-    $description = 'Created with secframe.com/badblood.'
+    $description = 'Randomly generated Computer for AD test environment.'
     #something is up with system containers i  pull in earlier.  try the random path.  if doesnt work set to default computer container
     try{
 		New-ADComputer -server $setdc -Name $CompName -DisplayName $CompName -Enabled $true -path $ou -ManagedBy $manager -SAMAccountName $sam -Description $Description

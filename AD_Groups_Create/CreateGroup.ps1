@@ -105,7 +105,7 @@ Function CreateGroup {
         will work on adding objects to containers later $ousall += get-adobject -Filter {objectclass -eq 'container'} -ResultSetSize 300|where-object -Property objectclass -eq 'container'|where-object -Property distinguishedname -notlike "*}*"|where-object -Property distinguishedname -notlike  "*DomainUpdates*"
 
         #>
-        $ouLocation = (get-random $OUsAll).distinguishedname
+        $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like 'OU=Groups,*' -or $_ -Like '*Permissions,*' -or $_ -Like '*Roles,*'} | Get-Random
 
         $Groupnameprefix = ''
         $Groupnameprefix = ($ownerinfo.samaccountname).substring(0,2) 

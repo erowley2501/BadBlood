@@ -70,7 +70,7 @@
                 $OUsAll = $args[1]
             }
             else{
-                $OUsAll = get-adobject -Filter {objectclass -eq 'organizationalunit'} -ResultSetSize 300
+                $OUsAll = get-adobject -Filter {objectclass -eq 'organizationalunit' -and Name -NotLike "Domain Controllers"} -ResultSetSize 300
             }
         }else {
             $OUsAll = $OUList
@@ -239,59 +239,128 @@
     
     #will work on adding things to containers later $ousall += get-adobject -Filter {objectclass -eq 'container'} -ResultSetSize 300|where-object -Property objectclass -eq 'container'|where-object -Property distinguishedname -notlike "*}*"|where-object -Property distinguishedname -notlike  "*DomainUpdates*"
     
-    $ouLocation = (Get-Random $OUsAll).distinguishedname
     
-    
-    
+    $serviceAccount = $false
+    $adminAccount = $false
     $accountType = 1..100|get-random 
-    if($accountType -le 3){ # X percent chance of being a service account
-    #service
-    $nameSuffix = "SA"
-    $description = 'Created with secframe.com/badblood.'
-    #removing do while loop and making random number range longer, sorry if the account is there already
-    # this is so that I can attempt to import multithreading on user creation
-    
-        $name = ""+ (Get-Random -Minimum 100 -Maximum 9999999999) + "$nameSuffix"
-        
-        
+    if($accountType -le 5){ 
+      # 5% percent chance of this being a service account
+      $serviceAccount = $true
+    } elseif ($accountType -ge 90) {
+      # 10% percent of the user also having a separate admin account
+      $adminAccount = $true
+    }
+
+
+    if($serviceAccount){
+      $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like 'OU=ServiceAccounts,*'} | Get-Random
     }else{
-        $surname = get-content("$($scriptpath)\Names\familynames-usa-top1000.txt")|get-random
-        # Write-Host $surname
-    $genderpreference = 0,1|get-random
-    if ($genderpreference -eq 0){$givenname = get-content("$($scriptpath)\Names\femalenames-usa-top1000.txt")|get-random}else{$givenname = get-content($scriptpath + '\Names\malenames-usa-top1000.txt')|get-random}
-    $name = $givenname+"_"+$surname
+      $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like '*OU=People,*'} | Get-Random
+    }
+
+    $samAccountName = ""
+    $samPrefix = $ouLocation -split '=' -split ',' | ? {$_.Length -eq 3 -and $_ -cmatch "^[A-Z]*$"}
+
+    $givenname = ""
+    $surname = ""
+    if($serviceAccount){
+
+      $samAccountName = "$samPrefix"+"SA" + (Get-Random -Minimum 100 -Maximum 9999999999)
+
+      $name = $samAccountName
+
+    }else{
+      
+      $surname = get-content("$($scriptpath)\Names\familynames-usa-top1000.txt")|get-random
+      
+      $genderpreference = 0,1|get-random
+
+      if ($genderpreference -eq 0){
+
+        $givenname = get-content("$($scriptpath)\Names\femalenames-usa-top1000.txt")|get-random
+
+      }else{
+
+        $givenname = get-content($scriptpath + '\Names\malenames-usa-top1000.txt')|get-random
+
+      }
+
+      $samAccountName = $samPrefix+$surname.ToUpper()+$givenname.ToUpper().Substring(0,1);
+
+      $name = $surname +", "+ $givenname
+
     }
     
-        $departmentnumber = [convert]::ToInt32('9999999') 
-        
+    $departmentnumber = [convert]::ToInt32('9999999')     
         
     #Need to figure out how to do the L attribute
-    $description = 'Created with secframe.com/badblood.'
-    $pwd = New-SWRandomPassword -MinPasswordLength 22 -MaxPasswordLength 25
+    
+    $pwd = New-SWRandomPassword -MinPasswordLength 12 -MaxPasswordLength 15
     #======================================================================
     # 
     
-    $passwordinDesc = 1..1000|get-random
-        
-        $pwd = New-SWRandomPassword -MinPasswordLength 22 -MaxPasswordLength 25
-            if ($passwordinDesc -lt 10) { 
-                $description = 'Just so I dont forget my password is ' + $pwd 
-            }else{}
+    # Removed the % chance of account password in description feature.
+    #$passwordinDesc = 1..1000|get-random
+    #    
+    #$pwd = New-SWRandomPassword -MinPasswordLength 12 -MaxPasswordLength 15
+    #if ($passwordinDesc -lt 10) { 
+    #  $description = 'Just so I dont forget my password is ' + $pwd 
+    #}
     if($name.length -gt 20){
-        $name = $name.substring(0,20)
+      $name = $name.substring(0,20)
     }
 
     $exists = $null
     try {
-        $exists = Get-ADUSer $name -ErrorAction Stop
+      $exists = Get-ADUser -Filter "SamAccountName -like'$samAccountName'" -ErrorAction Stop
     } catch{}
 
     if($exists){
-        return $true
+      return $true
     }
 
-    new-aduser -server $setdc  -Description $Description -DisplayName $name -name $name -SamAccountName $name -Surname $name -Enabled $true -Path $ouLocation -AccountPassword (ConvertTo-SecureString ($pwd) -AsPlainText -force)
-    
+    if ($serviceAccount) {
+
+      new-aduser -server $setdc `
+       -Description "Randomly generated Service Account for AD test environment." `
+       -DisplayName $name `
+       -Name $name `
+       -SamAccountName $SamAccountName `
+       -Enabled $true `
+       -Path $ouLocation `
+       -AccountPassword (ConvertTo-SecureString ($pwd) -AsPlainText -force)
+
+    } else {
+
+      new-aduser -server $setdc `
+       -Description "Randomly generated User Account for AD test environment." `
+       -DisplayName $name `
+       -Name $name `
+       -GivenName $givenname `
+       -sn $surname `
+       -SamAccountName $SamAccountName `
+       -Enabled $true `
+       -Path $ouLocation `
+       -AccountPassword (ConvertTo-SecureString ($pwd) -AsPlainText -force)
+
+    }
+
+    if($adminAccount){
+
+      $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like '*OU=Admin,*' -and $_ -Like '*Accounts*'} | Get-Random
+
+      new-aduser -server $setdc `
+       -Description "Admin account for $SamAccountName." `
+       -DisplayName "_"+$name `
+       -Name "_"+$SamAccountName `
+       -GivenName $givenname `
+       -sn $surname `
+       -SamAccountName "_"+$SamAccountName `
+       -Enabled $true `
+       -Path $ouLocation `
+       -AccountPassword (ConvertTo-SecureString ($pwd) -AsPlainText -force)
+
+    }
     
     
         

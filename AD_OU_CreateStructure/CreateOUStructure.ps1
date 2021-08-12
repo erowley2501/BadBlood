@@ -45,20 +45,17 @@ foreach ($name in $TopLevelOUs) {
             New-ADOrganizationalUnit -Name $adminsubou -Path $fulldn
             $adminsubfulldn = "OU=" + $adminsubou + "," + $fulldn
                     
-            if ($adminsubou -eq "Staging") {                          
-            }     
-                                 
-            else {
-                foreach ($AdminobjectOU in $AdminobjectOUs) {
+            foreach ($AdminobjectOU in $AdminobjectOUs) {
                     #add name together
-                    if ($adminsubou -eq 'Tier 0'){$adminOUPrefix = "T0-"}
-                    elseif ($adminsubou -eq 'Tier 1'){$adminOUPrefix = "T1-"}
-                    elseif ($adminsubou -eq 'Tier 2'){$adminOUPrefix = "T2-"}
-                    $adminobjectoucombo = $adminOUPrefix + $adminobjectou
+                if ($adminsubou -eq 'Tier 0'){$adminOUPrefix = "T0-"}
+                elseif ($adminsubou -eq 'Tier 1'){$adminOUPrefix = "T1-"}
+                elseif ($adminsubou -eq 'Tier 2'){$adminOUPrefix = "T2-"}
+                elseif ($adminsubou -eq 'Staging'){$adminOUPrefix = "S-"}
+                $adminobjectoucombo = $adminOUPrefix + $adminobjectou
 
-                    New-ADOrganizationalUnit -Name $adminobjectoucombo -Path $adminsubfulldn
-                }
+                New-ADOrganizationalUnit -Name $adminobjectoucombo -Path $adminsubfulldn
             }
+        
         }
     }
     elseif ($skipSubOUs -contains $name) {
@@ -94,7 +91,7 @@ foreach ($name in $TopLevelOUs) {
         }
         #Create Two Sub OUs in People OU required for IDM provisioning 
         New-ADOrganizationalUnit -Name 'Deprovisioned' -Path $fulldn -Description 'User account that have been deprovisioned by the IDM System'
-        New-ADOrganizationalUnit -Name 'Unassociated' -Path $fulldn -Description 'User Object that do have have any department affliation'
+        New-ADOrganizationalUnit -Name 'Unassociated' -Path $fulldn -Description 'User Object that does not have any department affliation'
     }
     
     else {}

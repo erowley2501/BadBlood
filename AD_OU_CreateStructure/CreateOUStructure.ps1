@@ -5,16 +5,16 @@ function Get-ScriptDirectory {
 }
 $scriptPath = Get-ScriptDirectory
 
-$TopLevelOUs = @('Admin', 'Tier 1','Tier 2','Stage', 'Quarantine', 'Grouper-Groups', 'People','Testing','.SecFrame.com')
+$TopLevelOUs = @('Admin','Tier 1','Tier 2','Stage', 'Quarantine', 'Grouper-Groups', 'People','Testing')
     
 $AdminSubOUs = @('Tier 0', 'Tier 1', 'Tier 2', 'Staging') 
     #loop before the ou name by making T#-OBJECT name as the OU
-$AdminobjectOUs = @('Accounts', 'Servers', 'Devices', 'Permissions','Roles') 
+$AdminobjectOUs = @('ServiceAccounts', 'Servers', 'Permissions','Roles') 
 #########################
 $skipSubOUs = @('Deprovision', 'Quarantine', 'Groups')
 #########################
 #$tierOUs = @('Tier 1', 'Tier 2')
-$ObjectSubOUs = @('ServiceAccounts', 'Groups', 'Devices','Test')
+$ObjectSubOUs = @('ServiceAccounts', 'Groups', 'Desktops', 'Laptops', 'VDIs', 'Test')
 
 
 #Consodated list of all 3 letter codes which IAM uses. 

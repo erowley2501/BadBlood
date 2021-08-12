@@ -251,11 +251,15 @@
       $adminAccount = $true
     }
 
+    if ($serviceAccount) {
 
-    if($serviceAccount){
-      $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like 'OU=ServiceAccounts,*'} | Get-Random
-    }else{
-      $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like '*OU=People,*'} | Get-Random
+      $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like '*ServiceAccounts,*'} | Get-Random
+
+
+    } else {
+
+      $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like '*,OU=People,*' -And $_ -NotLike 'OU=Deprov*' -And $_ -NotLike 'OU=Unasso*'} | Get-Random
+
     }
 
     $samAccountName = ""
@@ -263,6 +267,7 @@
 
     $givenname = ""
     $surname = ""
+
     if($serviceAccount){
 
       $samAccountName = "$samPrefix"+"SA" + (Get-Random -Minimum 100 -Maximum 9999999999)
@@ -285,9 +290,11 @@
 
       }
 
-      $samAccountName = $samPrefix+$surname.ToUpper()+$givenname.ToUpper().Substring(0,1);
+      $samAccountName = $samPrefix+$surname+$givenname.Substring(0,1);
 
-      $name = $surname +", "+ $givenname
+      $name = ($surname + ', ' + $givenname)
+
+      $displayname = ($name + ' (' + $samPrefix + ')' )
 
     }
     
@@ -295,11 +302,16 @@
         
     #Need to figure out how to do the L attribute
     
-    $pwd = New-SWRandomPassword -MinPasswordLength 12 -MaxPasswordLength 15
+    # Commented out by erowley2501
+    #$pwd = New-SWRandomPassword -MinPasswordLength 12 -MaxPasswordLength 15
+
+
+    $pwd = "Password1"
+
     #======================================================================
     # 
     
-    # Removed the % chance of account password in description feature.
+    # erowley2501: Removed the % chance of account password in description feature.
     #$passwordinDesc = 1..1000|get-random
     #    
     #$pwd = New-SWRandomPassword -MinPasswordLength 12 -MaxPasswordLength 15
@@ -334,10 +346,10 @@
 
       new-aduser -server $setdc `
        -Description "Randomly generated User Account for AD test environment." `
-       -DisplayName $name `
+       -DisplayName $displayname `
        -Name $name `
        -GivenName $givenname `
-       -sn $surname `
+       -Surname $surname `
        -SamAccountName $SamAccountName `
        -Enabled $true `
        -Path $ouLocation `
@@ -347,23 +359,19 @@
 
     if($adminAccount){
 
-      $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like '*OU=Admin,*' -and $_ -Like '*Accounts*'} | Get-Random
+      $ouLocation = $OUsAll.distinguishedname | Where-Object -Filter {$_ -Like '*OU=Admin,*' -and $_ -Match '^OU=Tier'} | Get-Random
 
       new-aduser -server $setdc `
        -Description "Admin account for $SamAccountName." `
-       -DisplayName "_"+$name `
-       -Name "_"+$SamAccountName `
-       -GivenName $givenname `
-       -sn $surname `
-       -SamAccountName "_"+$SamAccountName `
+       -DisplayName ('_'+$SamAccountName) `
+       -Name ('_'+$SamAccountName) `
+       -SamAccountName ('_'+$SamAccountName) `
        -Enabled $true `
        -Path $ouLocation `
        -AccountPassword (ConvertTo-SecureString ($pwd) -AsPlainText -force)
 
     }
-    
-    
-        
+       
     
     $pwd = ''
 
@@ -373,7 +381,7 @@
     
     $setASREP = 1..1000|get-random
     if($setASREP -lt 20){
-	Get-ADuser $name | Set-ADAccountControl -DoesNotRequirePreAuth:$true
+	  Get-ADUser -Filter "SamAccountName -like'$samAccountName'" -ErrorAction Stop | Set-ADAccountControl -DoesNotRequirePreAuth:$true
     }
     
     #===============================
@@ -382,7 +390,7 @@
     #===============================
     
     $upn = $name + '@' + $dnsroot
-    try{Set-ADUser -Identity $name -UserPrincipalName "$upn" }
+    try{Set-ADUser -Identity $samAccountName -UserPrincipalName "$upn" }
     catch{}
     
     # return $false

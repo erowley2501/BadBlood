@@ -389,9 +389,19 @@
     #Todo: Set SPN for kerberoasting.  Example attribute edit is in createcomputers.ps1
     #===============================
     
-    $upn = $name + '@' + $dnsroot
-    try{Set-ADUser -Identity $samAccountName -UserPrincipalName "$upn" }
-    catch{}
+    #### TODO: Add logic that will append a number (starting at 2) if someone with the plain UPN already exists.
+    if ($serviceAccount) {
+        $upn = $SamAccountName + '@' + $dnsroot
+        try{Set-ADUser -Identity $samAccountName -UserPrincipalName "$upn" }
+        catch{}
+        $upn = ""
+    } else {
+        # regular user
+        $upn = ($givenname + '.' + $surname) + '@' + $dnsroot
+        try{Set-ADUser -Identity $samAccountName -UserPrincipalName "$upn" }
+        catch{}
+        $upn = ""
+    }
     
     # return $false
     ################################
